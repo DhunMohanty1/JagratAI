@@ -2,83 +2,106 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
-  const { query, section, language, imageUrl } = await request.json(); // Added imageUrl
+  const { query, section, language, imageUrl } = await request.json();
 
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
   if (!OPENROUTER_API_KEY) {
     return NextResponse.json({ error: 'OpenRouter API key not configured.' }, { status: 500 });
   }
 
-  const getSectionPrompt = (section) => {
+  // Get system prompt based on section
+  const getSystemPrompt = () => {
+    const role = "JagratAI, Odisha's AI assistant";
+    const style = "Respond with concise bullet points and short paragraphs in markdown format";
+    
     switch (section) {
-      case "startup":
-        return "You are JagratAI, a helpful Odia assistant. Give concise, clear and *bullet-point* answers with short paragraphs for startup guidance in Odisha. Avoid long motivational lectures.";
+      case "startup": 
+        return `${role} specialized in startup guidance. ${style} Focus on Odisha-specific schemes, funding, and incubation.`;
       case "msme":
-        return "You are JagratAI, a helpful Odia assistant. Give concise, clear and *bullet-point* answers with short paragraphs for MSME support in Odisha. Avoid long motivational lectures.";
+        return `${role} specialized in MSME support. ${style} Cover registrations, subsidies, and Odisha's industrial policies.`;
       case "study":
-        return "You are JagratAI, a helpful Odia assistant. Give concise, clear and *bullet-point* answers with short paragraphs for education-related queries in Odisha. Avoid long motivational lectures.";
+        return `${role} specialized in education. ${style} Provide Odisha board/CBSE resources, scholarship details.`;
       default:
-        return "You are JagratAI, a helpful Odia assistant.";
+        return role;
     }
   };
 
-  const getLangNote = (lang) => {
-    switch (lang) {
-      case "or": return "Please answer in Odia language.";
-      case "hi": return "Please answer in Hindi language.";
-      default: return "Please answer in English.";
+  // Language instruction
+  const getLangInstruction = () => {
+    switch (language) {
+      case "or": return "Respond in Odia (Odia script)";
+      case "hi": return "Respond in Hindi (Devanagari script)";
+      default: return "Respond in English";
     }
   };
 
-  let messages = [];
+  // Prepare messages array
+  const messages = [
+    {
+      role: "system",
+      content: `${getSystemPrompt()}\n\n${getLangInstruction()}`
+    }
+  ];
 
-  // If an image URL is provided, structure the messages for vision capabilities
+  // Handle image input
   if (imageUrl) {
     messages.push({
       role: "user",
       content: [
-        { type: "text", text: query || "What is in this image?" }, // Use the query, or a default question
-        { type: "image_url", image_url: { url: imageUrl } }
+        { type: "text", text: query || "Describe this image in Odisha context" },
+        { 
+          type: "image_url",
+          image_url: {
+            url: imageUrl,
+            detail: "auto"  // Optimize for bandwidth
+          }
+        }
       ]
     });
   } else {
-    // Otherwise, use the existing text-based prompt
-    const enhancedPrompt = `${getSectionPrompt(section)}\n\n${getLangNote(language)}\n\nQuestion: ${query}`;
     messages.push({
       role: "user",
-      content: enhancedPrompt,
+      content: query
     });
   }
 
+  // Select model - Critical fix for vision error
+  const model = imageUrl 
+    ? "google/gemini-2.0-flash-exp:free"  // Vision-capable model
+    : "mistralai/mixtral-8x7b-instruct";  // Efficient text model
+
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://jagrat-ai.in/", // Ensure this matches your deployment URL
-        "X-Title": "JagratAI",
+        "HTTP-Referer": "https://jagrat-ai.in",
+        "X-Title": "JagratAI"
       },
       body: JSON.stringify({
-        // Use a model that supports vision if imageUrl is present, otherwise stick to current
-        model: imageUrl ? "meta-llama/llama-4-scout:free" : "deepseek/deepseek-r1-0528:free",
-        messages: messages,
-      }),
+        model,
+        messages,
+        max_tokens: 1024
+      })
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      console.error("OpenRouter API error:", errorData);
-      return NextResponse.json({ error: 'Failed to fetch response from AI model.', details: errorData }, { status: res.status });
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("OpenRouter Error:", response.status, errorData);
+      return NextResponse.json({ 
+        error: `AI model error (${response.status})`,
+        details: errorData.slice(0, 300) 
+      }, { status: 502 });
     }
 
-    const data = await res.json();
-    const result = data?.choices?.[0]?.message?.content || "No response.";
-    return NextResponse.json({ reply: result });
+    const data = await response.json();
+    return NextResponse.json({ reply: data.choices[0].message.content });
 
   } catch (error) {
-    console.error("Error in API route:", error);
-    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+    console.error("Network Error:", error);
+    return NextResponse.json({ 
+      error: "Network failure - check API endpoint and internet connection" 
+    }, { status: 500 });
   }
 }
