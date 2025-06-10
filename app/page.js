@@ -14,7 +14,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-
 export default function JagratAIPage() {
   const [query, setQuery] = useState("");
   const [reply, setReply] = useState("");
@@ -71,7 +70,7 @@ export default function JagratAIPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer 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",
+        Authorization: "Bearer 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",
         "HTTP-Referer": "https://jagrat-ai.in/",
         "X-Title": "JagratAI",
       },
