@@ -13,7 +13,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { supabase } from "@/lib/supabaseClient"
+
 
 export default function JagratAIPage() {
   const [query, setQuery] = useState("");
