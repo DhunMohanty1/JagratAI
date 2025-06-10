@@ -1,7 +1,8 @@
+// components/JagratAIPage.jsx (or wherever your component is located)
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"; // Assuming these paths are correct
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,29 +28,11 @@ export default function JagratAIPage() {
     if (transcript) setQuery(transcript);
   }, [transcript]);
 
-  const getSectionPrompt = (section) => {
-    switch (section) {
-      case "startup":
-        return "You are JagratAI, a helpful Odia assistant. Give concise, clear and *bullet-point* answers with short paragraphs for startup guidance in Odisha. Avoid long motivational lectures.";
-      case "msme":
-        return "You are JagratAI, a helpful Odia assistant. Give concise, clear and *bullet-point* answers with short paragraphs for MSME support in Odisha. Avoid long motivational lectures.";
-      case "study":
-        return "You are JagratAI, a helpful Odia assistant. Give concise, clear and *bullet-point* answers with short paragraphs for education-related queries in Odisha. Avoid long motivational lectures.";
-      default:
-        return "You are JagratAI, a helpful Odia assistant.";
-    }
-  };
-
-  const getLangNote = (lang) => {
-    switch (lang) {
-      case "or": return "Please answer in Odia language.";
-      case "hi": return "Please answer in Hindi language.";
-      default: return "Please answer in English.";
-    }
-  };
+  // Removed getSectionPrompt and getLangNote from client-side
+  // as they are now used on the server
 
   const formatReply = (text) => {
-    return text.split('**').map((segment, index) => 
+    return text.split('**').map((segment, index) =>
       index % 2 === 1 ? (
         <strong key={index} className="font-semibold text-blue-700">
           {segment}
@@ -61,39 +44,43 @@ export default function JagratAIPage() {
   };
 
   const handleAsk = async () => {
-    if (!query) return;
+    if (!query.trim()) return; // Added .trim() for better validation
     setLoading(true);
+    setReply(""); // Clear previous reply
 
-    const enhancedPrompt = `${getSectionPrompt(section)}\n\n${getLangNote(language)}\n\nQuestion: ${query}`;
+    try {
+      const res = await fetch("/api/ask", { // Call your new API endpoint
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          section,
+          language,
+        }),
+      });
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer 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",
-        "HTTP-Referer": "https://jagrat-ai.in/",
-        "X-Title": "JagratAI",
-      },
-      body: JSON.stringify({
-        model: "deepseek/deepseek-r1-0528:free",
-        messages: [
-          {
-            role: "user",
-            content: enhancedPrompt,
-          },
-        ],
-      }),
-    });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch response');
+      }
 
-    const data = await res.json();
-    const result = data?.choices?.[0]?.message?.content || "No response.";
-    setReply(result);
-    setLoading(false);
-    resetTranscript();
+      const data = await res.json();
+      setReply(data.reply);
+
+    } catch (error) {
+      console.error("Error asking JagratAI:", error);
+      setReply(`Sorry, something went wrong: ${error.message}`);
+    } finally {
+      setLoading(false);
+      resetTranscript();
+    }
   };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(reply);
+    // Optionally, add a small visual feedback like a "Copied!" message
   };
 
   return (
@@ -108,22 +95,22 @@ export default function JagratAIPage() {
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
             <div className="space-y-4 mt-8">
-              <Button 
-                variant={section === "startup" ? "default" : "outline"} 
+              <Button
+                variant={section === "startup" ? "default" : "outline"}
                 className="w-full"
                 onClick={() => setSection("startup")}
               >
                 Startup
               </Button>
-              <Button 
-                variant={section === "msme" ? "default" : "outline"} 
+              <Button
+                variant={section === "msme" ? "default" : "outline"}
                 className="w-full"
                 onClick={() => setSection("msme")}
               >
                 MSME
               </Button>
-              <Button 
-                variant={section === "study" ? "default" : "outline"} 
+              <Button
+                variant={section === "study" ? "default" : "outline"}
                 className="w-full"
                 onClick={() => setSection("study")}
               >
@@ -149,22 +136,22 @@ export default function JagratAIPage() {
       <div className="hidden md:block w-64 bg-white border-r p-6">
         <h2 className="text-xl font-bold text-blue-900 mb-8">JagratAI</h2>
         <div className="space-y-4">
-          <Button 
-            variant={section === "startup" ? "default" : "outline"} 
+          <Button
+            variant={section === "startup" ? "default" : "outline"}
             className="w-full"
             onClick={() => setSection("startup")}
           >
             Startup
           </Button>
-          <Button 
-            variant={section === "msme" ? "default" : "outline"} 
+          <Button
+            variant={section === "msme" ? "default" : "outline"}
             className="w-full"
             onClick={() => setSection("msme")}
           >
             MSME
           </Button>
-          <Button 
-            variant={section === "study" ? "default" : "outline"} 
+          <Button
+            variant={section === "study" ? "default" : "outline"}
             className="w-full"
             onClick={() => setSection("study")}
           >
@@ -241,10 +228,10 @@ export default function JagratAIPage() {
                   disabled={loading}
                 />
                 <div className="flex gap-2 justify-between">
-                  <Button 
-                    onClick={() => SpeechRecognition.startListening({ 
-                      continuous: false, 
-                      language: language === "or" ? "or-IN" : language === "hi" ? "hi-IN" : "en-IN" 
+                  <Button
+                    onClick={() => SpeechRecognition.startListening({
+                      continuous: false,
+                      language: language === "or" ? "or-IN" : language === "hi" ? "hi-IN" : "en-IN"
                     })}
                     variant="outline"
                     size="icon"
@@ -252,8 +239,8 @@ export default function JagratAIPage() {
                   >
                     <Mic className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    onClick={handleAsk} 
+                  <Button
+                    onClick={handleAsk}
                     disabled={loading || !query.trim()}
                     className="flex-1"
                   >
