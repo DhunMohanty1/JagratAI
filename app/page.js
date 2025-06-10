@@ -1,261 +1,130 @@
-// components/JagratAIPage.jsx (or wherever your component is located)
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input"; // Assuming these paths are correct
+// app/page.js
+import React from 'react';
+import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Mic, Menu } from "lucide-react";
-import { motion } from "framer-motion";
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator"; // For a horizontal line
 
-export default function JagratAIPage() {
-  const [query, setQuery] = useState("");
-  const [reply, setReply] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [section, setSection] = useState("startup");
-  const [language, setLanguage] = useState("en");
+export default function HomePage() {
+  const companyName = "JagratAI";
+  const tagline = "Your Smart AI Assistant for Odisha's Growth.";
+  const introduction = "JagratAI is an innovative AI platform specifically designed to empower individuals and businesses in Odisha. We provide tailored, localized guidance across key sectors: startups, MSMEs, and education. Our mission is to bridge information gaps and foster growth, making essential information accessible and actionable for everyone in the state.";
+  const companyGoal = "Our primary goal is to be the go-to resource for anyone seeking reliable, concise, and relevant information in Odisha, promoting economic development and educational advancement through intelligent assistance.";
 
-  const { transcript, resetTranscript, listening } = useSpeechRecognition();
-
-  useEffect(() => {
-    if (transcript) setQuery(transcript);
-  }, [transcript]);
-
-  // Removed getSectionPrompt and getLangNote from client-side
-  // as they are now used on the server
-
-  const formatReply = (text) => {
-    return text.split('**').map((segment, index) =>
-      index % 2 === 1 ? (
-        <strong key={index} className="font-semibold text-blue-700">
-          {segment}
-        </strong>
-      ) : (
-        segment
-      )
-    );
-  };
-
-  const handleAsk = async () => {
-    if (!query.trim()) return; // Added .trim() for better validation
-    setLoading(true);
-    setReply(""); // Clear previous reply
-
-    try {
-      const res = await fetch("/api/ask", { // Call your new API endpoint
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query,
-          section,
-          language,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to fetch response');
-      }
-
-      const data = await res.json();
-      setReply(data.reply);
-
-    } catch (error) {
-      console.error("Error asking JagratAI:", error);
-      setReply(`Sorry, something went wrong: ${error.message}`);
-    } finally {
-      setLoading(false);
-      resetTranscript();
-    }
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(reply);
-    // Optionally, add a small visual feedback like a "Copied!" message
-  };
+  // Key areas of focus for your AI
+  const focusAreas = [
+    {
+      title: "Startup Guidance",
+      description: "Get essential, concise advice for launching and scaling your venture in Odisha. From registration to funding, we cover it all.",
+    },
+    {
+      title: "MSME Support",
+      description: "Navigate government schemes, secure financing, and optimize operations for your Micro, Small, and Medium Enterprises.",
+    },
+    {
+      title: "Education & Study",
+      description: "Find answers to academic queries, explore career opportunities, and access valuable study resources relevant to Odisha's educational landscape.",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-blue-100 flex">
-      {/* Mobile Sidebar */}
-      <div className="md:hidden p-4 absolute top-4 left-4 z-10">
-        <Sheet>
-          <SheetTrigger>
-            <Button variant="outline" size="icon">
-              <Menu className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64">
-            <div className="space-y-4 mt-8">
-              <Button
-                variant={section === "startup" ? "default" : "outline"}
-                className="w-full"
-                onClick={() => setSection("startup")}
-              >
-                Startup
-              </Button>
-              <Button
-                variant={section === "msme" ? "default" : "outline"}
-                className="w-full"
-                onClick={() => setSection("msme")}
-              >
-                MSME
-              </Button>
-              <Button
-                variant={section === "study" ? "default" : "outline"}
-                className="w-full"
-                onClick={() => setSection("study")}
-              >
-                Study
-              </Button>
-              <div className="pt-4">
-                <select
-                  className="w-full border border-gray-300 rounded-md px-2 py-2 text-sm"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                >
-                  <option value="en">English</option>
-                  <option value="hi">Hindi</option>
-                  <option value="or">Odia</option>
-                </select>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block w-64 bg-white border-r p-6">
-        <h2 className="text-xl font-bold text-blue-900 mb-8">JagratAI</h2>
-        <div className="space-y-4">
-          <Button
-            variant={section === "startup" ? "default" : "outline"}
-            className="w-full"
-            onClick={() => setSection("startup")}
-          >
-            Startup
-          </Button>
-          <Button
-            variant={section === "msme" ? "default" : "outline"}
-            className="w-full"
-            onClick={() => setSection("msme")}
-          >
-            MSME
-          </Button>
-          <Button
-            variant={section === "study" ? "default" : "outline"}
-            className="w-full"
-            onClick={() => setSection("study")}
-          >
-            Study
-          </Button>
-          <div className="pt-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Response Language
-            </label>
-            <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-            >
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-              <option value="or">Odia</option>
-            </select>
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-white to-blue-50">
+      {/* Navbar (Simple Header for Homepage) */}
+      <nav className="w-full bg-white border-b py-4 px-4 md:px-8 flex justify-between items-center shadow-sm">
+        <Link href="/" passHref>
+          <div className="text-2xl font-bold text-blue-900 cursor-pointer">
+            {companyName}
           </div>
-        </div>
-      </div>
+        </Link>
+        {/* This button redirects to your chatbot page */}
+        <Link href="/chatbot" passHref>
+          <Button>Access AI Assistant</Button>
+        </Link>
+      </nav>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <header className="p-6 pb-0 md:p-8 md:pb-0">
-          <h1 className="text-3xl md:text-4xl font-bold text-blue-900">JagratAI</h1>
-          <p className="text-lg text-gray-700 mt-2">
-            Odisha-specific {section.charAt(0).toUpperCase() + section.slice(1)} Assistance
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-16">
+        {/* Hero Section */}
+        <section className="text-center py-12 md:py-20 bg-blue-50 rounded-xl shadow-md mb-12">
+          <h1 className="text-4xl md:text-6xl font-extrabold text-blue-900 leading-tight mb-4">
+            {companyName}: <span className="text-blue-700">{tagline}</span>
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-700 max-w-3xl mx-auto mb-8">
+            {introduction}
           </p>
-        </header>
+          {/* Main Call to Action Button */}
+          <Link href="/chatbot" passHref>
+            <Button size="lg" className="px-8 py-3 text-lg bg-blue-700 hover:bg-blue-800 transition-colors duration-300">
+              Launch JagratAI Assistant
+            </Button>
+          </Link>
+        </section>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex-1 flex flex-col p-6 md:p-8"
-        >
-          {/* Answer Display Area */}
-          <div className="flex-1 mb-6 overflow-y-auto">
-            {reply && (
-              <Card className="h-full shadow-lg">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-blue-700">Response</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={copyToClipboard}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
+        <Separator className="my-12 bg-blue-200" />
+
+        {/* Company Goal Section */}
+        <section className="py-12 md:py-16 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-blue-900 mb-6">
+            Our Vision for Odisha
+          </h2>
+          <p className="text-lg text-gray-700 leading-relaxed max-w-4xl mx-auto">
+            {companyGoal}
+          </p>
+        </section>
+
+        <Separator className="my-12 bg-blue-200" />
+
+        {/* Focus Areas Section */}
+        <section className="py-12 md:py-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-blue-900 text-center mb-8">
+            How JagratAI Helps You
+          </h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {focusAreas.map((area, index) => (
+              <Card key={index} className="bg-white shadow-lg border-blue-200 border-2 hover:shadow-xl transition-shadow duration-300">
+                <CardHeader>
+                  <CardTitle className="text-blue-700">{area.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-blue max-w-none">
-                    <p className="whitespace-pre-wrap text-gray-800 text-base leading-relaxed">
-                      {formatReply(reply)}
-                    </p>
-                  </div>
+                  <CardDescription className="text-gray-700 leading-relaxed">
+                    {area.description}
+                  </CardDescription>
+                  {/* Each card also links to the chatbot page */}
+                  <Link href="/chatbot" passHref>
+                    <Button variant="link" className="mt-4 pl-0 text-blue-600 hover:text-blue-800">
+                      Explore {area.title} &rarr;
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
-            )}
+            ))}
           </div>
+        </section>
 
-          {/* Input Area */}
-          <Card className="shadow-xl rounded-2xl">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex flex-col gap-4">
-                <Textarea
-                  placeholder={`Ask about ${section} in Odisha...`}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="min-h-[100px]"
-                  disabled={loading}
-                />
-                <div className="flex gap-2 justify-between">
-                  <Button
-                    onClick={() => SpeechRecognition.startListening({
-                      continuous: false,
-                      language: language === "or" ? "or-IN" : language === "hi" ? "hi-IN" : "en-IN"
-                    })}
-                    variant="outline"
-                    size="icon"
-                    disabled={listening || loading}
-                  >
-                    <Mic className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={handleAsk}
-                    disabled={loading || !query.trim()}
-                    className="flex-1"
-                  >
-                    {loading ? (
-                      <span>Processing...</span>
-                    ) : (
-                      <span>Ask JagratAI ({section.charAt(0).toUpperCase() + section.slice(1)})</span>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+        {/* Call to Action (Repeat) */}
+        <section className="text-center py-12 md:py-20">
+          <h2 className="text-3xl md:text-4xl font-bold text-blue-900 mb-4">
+            Ready to Experience Smart Guidance?
+          </h2>
+          <p className="text-lg text-gray-700 max-w-2xl mx-auto mb-8">
+            Join the growing community of entrepreneurs, businesses, and students leveraging JagratAI for success in Odisha.
+          </p>
+          <Link href="/chatbot" passHref>
+            <Button size="lg" className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 transition-colors duration-300">
+              Get Started with JagratAI
+            </Button>
+          </Link>
+        </section>
+      </main>
+
+      {/* Basic Footer */}
+      <footer className="w-full border-t bg-white py-6 md:py-8 mt-12 text-sm text-gray-600 text-center">
+        <div className="container mx-auto px-4">
+          &copy; {new Date().getFullYear()} {companyName}. All rights reserved.
+          <p className="text-xs text-gray-500 mt-2">
+            Built with ❤️ for the people of Odisha.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
